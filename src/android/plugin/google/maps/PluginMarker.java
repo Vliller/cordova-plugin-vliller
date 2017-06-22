@@ -164,6 +164,89 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
   }
 
+  private MarkerOptions prepareMarkerOptions(final JSONObject opts) throws JSONException {
+    final MarkerOptions markerOptions = new MarkerOptions();
+
+    if (opts.has("position")) {
+        JSONObject position = opts.getJSONObject("position");
+        markerOptions.position(new LatLng(position.getDouble("lat"), position.getDouble("lng")));
+    }
+
+    if (opts.has("title")) {
+        markerOptions.title(opts.getString("title"));
+    }
+
+    if (opts.has("snippet")) {
+        markerOptions.snippet(opts.getString("snippet"));
+    }
+
+    if (opts.has("visible")) {
+      if (opts.has("icon") && !"".equals(opts.getString("icon"))) {
+        markerOptions.visible(false);
+      } else {
+        markerOptions.visible(opts.getBoolean("visible"));
+      }
+    }
+
+    if (opts.has("draggable")) {
+      markerOptions.draggable(opts.getBoolean("draggable"));
+    }
+
+    if (opts.has("rotation")) {
+      markerOptions.rotation((float)opts.getDouble("rotation"));
+    }
+
+    if (opts.has("flat")) {
+      markerOptions.flat(opts.getBoolean("flat"));
+    }
+
+    if (opts.has("opacity")) {
+      markerOptions.alpha((float) opts.getDouble("opacity"));
+    }
+
+    if (opts.has("zIndex")) {
+      markerOptions.zIndex((float) opts.getDouble("zIndex"));
+    }
+
+    return markerOptions;
+  }
+
+  private JSONObject prepareProperties(final JSONObject opts, MarkerOptions markerOptions) throws JSONException {
+    final JSONObject properties = new JSONObject();
+
+    if (opts.has("visible")) {
+      if (opts.has("icon") && !"".equals(opts.getString("icon"))) {
+        properties.put("isVisible", false);
+      } else {
+        properties.put("isVisible", markerOptions.isVisible());
+      }
+    }
+
+    if (opts.has("styles")) {
+      properties.put("styles", opts.getJSONObject("styles"));
+    }
+
+    if (opts.has("disableAutoPan")) {
+      properties.put("disableAutoPan", opts.getBoolean("disableAutoPan"));
+    } else {
+      properties.put("disableAutoPan", false);
+    }
+
+    if (opts.has("noCache")) {
+      properties.put("noCache", opts.getBoolean("noCache"));
+    } else {
+      properties.put("noCache", false);
+    }
+
+    if (opts.has("useHtmlInfoWnd")) {
+      properties.put("useHtmlInfoWnd", opts.getBoolean("useHtmlInfoWnd"));
+    } else {
+      properties.put("useHtmlInfoWnd", false);
+    }
+
+    return properties;
+  }
+
   /**
    * Create a marker
    * @param args
@@ -174,63 +257,10 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
   public void create(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
 
     // Create an instance of Marker class
-    final MarkerOptions markerOptions = new MarkerOptions();
-    final JSONObject properties = new JSONObject();
-
     final JSONObject opts = args.getJSONObject(1);
-    if (opts.has("position")) {
-        JSONObject position = opts.getJSONObject("position");
-        markerOptions.position(new LatLng(position.getDouble("lat"), position.getDouble("lng")));
-    }
-    if (opts.has("title")) {
-        markerOptions.title(opts.getString("title"));
-    }
-    if (opts.has("snippet")) {
-        markerOptions.snippet(opts.getString("snippet"));
-    }
-    if (opts.has("visible")) {
-      if (opts.has("icon") && !"".equals(opts.getString("icon"))) {
-        markerOptions.visible(false);
-        properties.put("isVisible", false);
-      } else {
-        markerOptions.visible(opts.getBoolean("visible"));
-        properties.put("isVisible", markerOptions.isVisible());
-      }
-    }
-    if (opts.has("draggable")) {
-      markerOptions.draggable(opts.getBoolean("draggable"));
-    }
-    if (opts.has("rotation")) {
-      markerOptions.rotation((float)opts.getDouble("rotation"));
-    }
-    if (opts.has("flat")) {
-      markerOptions.flat(opts.getBoolean("flat"));
-    }
-    if (opts.has("opacity")) {
-      markerOptions.alpha((float) opts.getDouble("opacity"));
-    }
-    if (opts.has("zIndex")) {
-      markerOptions.zIndex((float) opts.getDouble("zIndex"));
-    }
 
-    if (opts.has("styles")) {
-      properties.put("styles", opts.getJSONObject("styles"));
-    }
-    if (opts.has("disableAutoPan")) {
-      properties.put("disableAutoPan", opts.getBoolean("disableAutoPan"));
-    } else {
-      properties.put("disableAutoPan", false);
-    }
-    if (opts.has("noCache")) {
-      properties.put("noCache", opts.getBoolean("noCache"));
-    } else {
-      properties.put("noCache", false);
-    }
-    if (opts.has("useHtmlInfoWnd")) {
-      properties.put("useHtmlInfoWnd", opts.getBoolean("useHtmlInfoWnd"));
-    } else {
-      properties.put("useHtmlInfoWnd", false);
-    }
+    final MarkerOptions markerOptions = this.prepareMarkerOptions(opts);
+    final JSONObject properties = this.prepareProperties(opts, markerOptions);
 
     cordova.getActivity().runOnUiThread(new Runnable() {
       @Override
@@ -396,9 +426,6 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         });
       }
     });
-
-
-
   }
 
   private void setDropAnimation_(final Marker marker, final PluginAsyncInterface callback) {
@@ -522,7 +549,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       }
     });
   }
-  
+
   /**
    *
    * http://android-er.blogspot.com/2013/01/implement-bouncing-marker-for-google.html
