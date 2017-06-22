@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
-<plugin id="cordova-plugin-vliller" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-    <name>cordova-plugin-vliller</name>
+<plugin id="cordova-plugin-vliller-map" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>cordova-plugin-vliller-map</name>
     <js-module name="BaseClass" src="www/BaseClass.js">
       <runs />
     </js-module>
@@ -70,7 +70,7 @@
     <js-module name="Environment" src="www/Environment.js">
       <runs />
     </js-module>
-    <js-module name="Vliller" src="www/vliller.js">
+    <js-module name="VlillerMap" src="www/main.js">
       <clobbers target="plugin.google.maps" />
     </js-module>
 
