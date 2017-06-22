@@ -218,36 +218,32 @@ function getAllChildren(root) {
       return [];
     }
 
-    var ignoreTags = ["pre", "textarea",
-      "p", "form", "input", "table", "caption", "canvas",
-      "ion-content", "ion-app", "ion-nav"];
+    var ignoreTags = [
+      "pre", "textarea", "p", "form", "input", "table", "caption",
+      "canvas", "ion-content", "ion-app", "ion-nav", "svg"
+    ];
+    var ignoreClasses = ["nav-decor", "ion-page", "fixed-content"];
 
-    var list;
+    var clickableElements = [];
     if (window.document.querySelectorAll) {
         // Android: v4.3 and over
         // iOS safari: v9.2 and over
         var childNodes = root.querySelectorAll("*");
-        var allClickableElements = Array.prototype.slice.call(childNodes);
-        list = allClickableElements.filter(function(node) {
-            var tagName = node.tagName.toLowerCase();
-            return node !== root && _shouldWatchByNative(node) &&
-              ignoreTags.indexOf(tagName) == -1 &&
-              node.tagName.indexOf("nav-decor") === -1 &&
-              node.className.indexOf("ion-page") === -1 &&
-              node.className.indexOf("fixed-content") === -1;
-        });
+
+        clickableElements = Array.prototype.slice.call(childNodes);
     } else {
-        var node;
-        var clickableElements = root.getElementsByTagName("*");
-        for (var i = 0; i < clickableElements.length; i++) {
-            node = clickableElements[i];
-            if (_shouldWatchByNative(node) &&
-              ignoreTags.indexOf(tagName) == -1 &&
-              node.className.indexOf("nav-decor") === -1 &&
-              node.className.indexOf("ion-page") === -1 &&
-              node.className.indexOf("fixed-content") === -1) {
-                list.push(node);
-            }
+        clickableElements = root.getElementsByTagName("*");
+
+    }
+
+    var list = [];
+    var node, tagName;
+    for (var i = 0; i < clickableElements.length; i++) {
+        node = clickableElements[i];
+        tagName = node.tagName.toLowerCase();
+
+        if (_shouldWatchByNative(node) && ignoreTags.indexOf(tagName) === -1 && ignoreClasses.indexOf(node.className) === -1) {
+            list.push(node);
         }
     }
 
