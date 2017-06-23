@@ -164,6 +164,13 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
   }
 
+  /**
+   * Prepapre MarkerOptions for create()
+   *
+   * @param  opts
+   * @return
+   * @throws JSONException
+   */
   private MarkerOptions prepareMarkerOptions(final JSONObject opts) throws JSONException {
     final MarkerOptions markerOptions = new MarkerOptions();
 
@@ -211,6 +218,14 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     return markerOptions;
   }
 
+  /**
+   * Preapre properties for create()
+   *
+   * @param  opts
+   * @param  markerOptions
+   * @return
+   * @throws JSONException
+   */
   private JSONObject prepareProperties(final JSONObject opts, MarkerOptions markerOptions) throws JSONException {
     final JSONObject properties = new JSONObject();
 
@@ -247,18 +262,65 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     return properties;
   }
 
+  private Bundle prepareIconBundle(JSONObject opts) throws JSONException {
+
+    Bundle bundle = null;
+    Object value = opts.get("icon");
+
+    if (JSONObject.class.isInstance(value)) {
+      JSONObject iconProperty = (JSONObject) value;
+      bundle = PluginUtil.Json2Bundle(iconProperty);
+
+      // The `anchor` of the `icon` property
+      if (iconProperty.has("anchor")) {
+        value = iconProperty.get("anchor");
+        if (JSONArray.class.isInstance(value)) {
+          JSONArray points = (JSONArray) value;
+          double[] anchorPoints = new double[points.length()];
+          for (int i = 0; i < points.length(); i++) {
+            anchorPoints[i] = points.getDouble(i);
+          }
+          bundle.putDoubleArray("anchor", anchorPoints);
+        }
+      }
+
+      // The `infoWindowAnchor` property for infowindow
+      if (opts.has("infoWindowAnchor")) {
+        value = opts.get("infoWindowAnchor");
+        if (JSONArray.class.isInstance(value)) {
+          JSONArray points = (JSONArray) value;
+          double[] anchorPoints = new double[points.length()];
+          for (int i = 0; i < points.length(); i++) {
+            anchorPoints[i] = points.getDouble(i);
+          }
+          bundle.putDoubleArray("infoWindowAnchor", anchorPoints);
+        }
+      }
+    } else if (JSONArray.class.isInstance(value)) {
+      float[] hsv = new float[3];
+      JSONArray arrayRGBA = (JSONArray) value;
+      Color.RGBToHSV(arrayRGBA.getInt(0), arrayRGBA.getInt(1), arrayRGBA.getInt(2), hsv);
+      bundle = new Bundle();
+      bundle.putFloat("iconHue", hsv[0]);
+    } else {
+      bundle = new Bundle();
+      bundle.putString("url", (String) value);
+    }
+
+    if (opts.has("animation")) {
+      bundle.putString("animation", opts.getString("animation"));
+    }
+
+    return bundle;
+  }
+
   /**
-   * Create a marker
-   * @param args
-   * @param callbackContext
+   * Create an instance of Marker class and return an JSONObject in callback onPostExecute
+   * @param opts
+   * @param callback
    * @throws JSONException
    */
-  @SuppressWarnings("unused")
-  public void create(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
-
-    // Create an instance of Marker class
-    final JSONObject opts = args.getJSONObject(1);
-
+  private void createMarker(final JSONObject opts, final PluginAsyncInterface callback) throws JSONException {
     final MarkerOptions markerOptions = this.prepareMarkerOptions(opts);
     final JSONObject properties = this.prepareProperties(opts, markerOptions);
 
@@ -284,57 +346,13 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
               result.put("hashCode", marker.hashCode());
               result.put("id", id);
 
-
               // Load icon
               if (opts.has("icon")) {
                 //------------------------------
                 // Case: have the icon property
                 //------------------------------
-                Bundle bundle = null;
-                Object value = opts.get("icon");
-                if (JSONObject.class.isInstance(value)) {
-                  JSONObject iconProperty = (JSONObject) value;
-                  bundle = PluginUtil.Json2Bundle(iconProperty);
+                Bundle bundle = PluginMarker.this.prepareIconBundle(opts);
 
-                  // The `anchor` of the `icon` property
-                  if (iconProperty.has("anchor")) {
-                    value = iconProperty.get("anchor");
-                    if (JSONArray.class.isInstance(value)) {
-                      JSONArray points = (JSONArray) value;
-                      double[] anchorPoints = new double[points.length()];
-                      for (int i = 0; i < points.length(); i++) {
-                        anchorPoints[i] = points.getDouble(i);
-                      }
-                      bundle.putDoubleArray("anchor", anchorPoints);
-                    }
-                  }
-
-                  // The `infoWindowAnchor` property for infowindow
-                  if (opts.has("infoWindowAnchor")) {
-                    value = opts.get("infoWindowAnchor");
-                    if (JSONArray.class.isInstance(value)) {
-                      JSONArray points = (JSONArray) value;
-                      double[] anchorPoints = new double[points.length()];
-                      for (int i = 0; i < points.length(); i++) {
-                        anchorPoints[i] = points.getDouble(i);
-                      }
-                      bundle.putDoubleArray("infoWindowAnchor", anchorPoints);
-                    }
-                  }
-                } else if (JSONArray.class.isInstance(value)) {
-                  float[] hsv = new float[3];
-                  JSONArray arrayRGBA = (JSONArray) value;
-                  Color.RGBToHSV(arrayRGBA.getInt(0), arrayRGBA.getInt(1), arrayRGBA.getInt(2), hsv);
-                  bundle = new Bundle();
-                  bundle.putFloat("iconHue", hsv[0]);
-                } else {
-                  bundle = new Bundle();
-                  bundle.putString("url", (String) value);
-                }
-
-                if (opts.has("animation")) {
-                  bundle.putString("animation", opts.getString("animation"));
-                }
                 PluginMarker.this.setIcon_(marker, bundle, new PluginAsyncInterface() {
 
                   @Override
@@ -368,17 +386,16 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
                             @Override
                             public void onPostExecute(Object object) {
-                              Marker marker = (Marker) object;
-                              callbackContext.success(result);
+                              callback.onPostExecute(result);
                             }
 
                             @Override
                             public void onError(String errorMsg) {
-                              callbackContext.error(errorMsg);
+                              callback.onError(errorMsg);
                             }
                           });
                         } else {
-                          callbackContext.success(result);
+                          callback.onPostExecute(result);
                         }
                       }
                     });
@@ -386,7 +403,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
                   @Override
                   public void onError(String errorMsg) {
-                    callbackContext.error(errorMsg);
+                    callback.onError(errorMsg);
                   }
 
                 });
@@ -404,28 +421,52 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
                     @Override
                     public void onPostExecute(Object object) {
-                      callbackContext.success(result);
+                      callback.onPostExecute(result);
                     }
 
                     @Override
                     public void onError(String errorMsg) {
-                      callbackContext.error(errorMsg);
+                      callback.onError(errorMsg);
                     }
 
                   });
                 } else {
                   // Return the result if does not specify the icon property.
-                  callbackContext.success(result);
+                  callback.onPostExecute(result);
                 }
               }
             } catch (Exception e) {
               e.printStackTrace();
-              callbackContext.error("" + e.getMessage());
+              callback.onError("" + e.getMessage());
             }
           }
         });
       }
     });
+  }
+
+  /**
+   * Create a marker
+   * @param args
+   * @param callbackContext
+   * @throws JSONException
+   */
+  public void create(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    final JSONObject opts = args.getJSONObject(1);
+
+    this.createMarker(opts, new PluginAsyncInterface() {
+      @Override
+      public void onPostExecute(Object object) {
+        JSONObject result = (JSONObject) object;
+        callbackContext.success(result);
+      }
+
+      @Override
+      public void onError(String errorMsg) {
+        callbackContext.error(errorMsg);
+      }
+    });
+
   }
 
   private void setDropAnimation_(final Marker marker, final PluginAsyncInterface callback) {
