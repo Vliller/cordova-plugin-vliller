@@ -898,8 +898,14 @@ Map.prototype.addCircle = function(circleOptions, callback) {
 //-------------
 // Marker
 //-------------
-Map.prototype.addMarker = function(markerOptions, callback) {
-    var self = this;
+
+/**
+ * Prepare options with default values if needed.
+ *
+ * @param  {any} markerOptions
+ * @return {any}
+ */
+function prepareMarkerOptions(markerOptions) {
     markerOptions.animation = markerOptions.animation || undefined;
     markerOptions.position = markerOptions.position || {};
     markerOptions.position.lat = markerOptions.position.lat || 0.0;
@@ -923,27 +929,78 @@ Map.prototype.addMarker = function(markerOptions, callback) {
             markerOptions.styles.color = common.HTMLColor2RGBA(markerOptions.styles.color || "#000000");
         }
     }
+
     if (markerOptions.icon && common.isHTMLColorString(markerOptions.icon)) {
         markerOptions.icon = common.HTMLColor2RGBA(markerOptions.icon);
     }
 
-    exec(function(result) {
-        markerOptions.hashCode = result.hashCode;
-        var marker = new Marker(self, result.id, markerOptions);
+    return markerOptions;
+}
 
-        self.MARKERS[result.id] = marker;
-        self.OVERLAYS[result.id] = marker;
+/**
+ * Create js Marker and adds it to MARKERS and OVERLAYS arrays
+ *
+ * @param  {any} nativeMarker
+ * @param  {any} options
+ * @return {Marker}
+ */
+function createMarkerFromNative(nativeMarker, options) {
+    var self = this;
+    var marker;
 
-        marker.one(result.id + "_remove", function() {
-            marker.off();
-            delete self.MARKERS[result.id];
-            delete self.OVERLAYS[result.id];
-            marker = undefined;
-        });
+    options.hashCode = nativeMarker.hashCode;
+
+    marker = new Marker(self, nativeMarker.id, options);
+
+    self.MARKERS[nativeMarker.id] = marker;
+    self.OVERLAYS[nativeMarker.id] = marker;
+
+    marker.one(nativeMarker.id + "_remove", function () {
+        marker.off();
+
+        delete self.MARKERS[nativeMarker.id];
+        delete self.OVERLAYS[nativeMarker.id];
+
+        marker = undefined;
+    });
+
+    return marker;
+}
+
+Map.prototype.addMarker = function (markerOptions, callback) {
+    var self = this;
+
+    markerOptions = prepareMarkerOptions(markerOptions);
+
+    exec(function (nativeMarker) {
+        var marker = createMarkerFromNative.call(self, nativeMarker, markerOptions, callback);
+
         if (typeof callback === "function") {
             callback.call(self, marker, self);
         }
     }, self.errorHandler, self.id, 'loadPlugin', ['Marker', markerOptions]);
+};
+
+/**
+ *
+ * @param {[type]}   markersOptions [description]
+ * @param {Function} callback       [description]
+ */
+Map.prototype.addMarkers = function (markersOptions, callback) {
+    var self = this;
+
+    markersOptions.map(prepareMarkerOptions);
+
+    exec(function (nativeMarkers) {
+        var markers = [];
+        for (var i = 0; i < nativeMarkers.length; i++) {
+            markers.push(createMarkerFromNative.call(self, nativeMarkers[i], markersOptions[i]));
+        }
+
+        if (typeof callback === "function") {
+            callback.call(self, markers, self);
+        }
+    }, self.errorHandler, self.id, 'createMarkers', markersOptions);
 };
 
 /*****************************************************************************
