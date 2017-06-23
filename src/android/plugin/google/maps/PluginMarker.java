@@ -1214,7 +1214,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
           }
         }
       };
-      task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+      task.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
       iconLoadingTasks.add(task);
 
 
