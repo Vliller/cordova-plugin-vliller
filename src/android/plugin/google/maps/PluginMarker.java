@@ -219,7 +219,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
   }
 
   /**
-   * Preapre properties for create()
+   * Preapre properties for Marker.create()
    *
    * @param  opts
    * @param  markerOptions
@@ -262,9 +262,15 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     return properties;
   }
 
+  /**
+   * Prepare Bundle icon for Marker.create()
+   * @param opts
+   * @return
+   * @throws JSONException
+   */
   private Bundle prepareIconBundle(JSONObject opts) throws JSONException {
 
-    Bundle bundle = null;
+    Bundle bundle;
     Object value = opts.get("icon");
 
     if (JSONObject.class.isInstance(value)) {
@@ -366,6 +372,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                           try {
                             marker.setVisible(opts.getBoolean("visible"));
                           } catch (JSONException e) {
+                            // TODO
                           }
                         } else {
                           marker.setVisible(true);
@@ -381,6 +388,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                             e.printStackTrace();
                           }
                         }
+
                         if (markerAnimation != null) {
                           PluginMarker.this.setMarkerAnimation_(marker, markerAnimation, new PluginAsyncInterface() {
 
@@ -447,14 +455,12 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
   /**
    * Create a marker
-   * @param args
+   * @param markerOptions
    * @param callbackContext
    * @throws JSONException
    */
-  public void create(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
-    final JSONObject opts = args.getJSONObject(1);
-
-    this.createMarker(opts, new PluginAsyncInterface() {
+  public void create(final JSONObject markerOptions, final CallbackContext callbackContext) throws JSONException {
+    this.createMarker(markerOptions, new PluginAsyncInterface() {
       @Override
       public void onPostExecute(Object object) {
         JSONObject result = (JSONObject) object;
@@ -467,6 +473,20 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       }
     });
 
+  }
+
+  /**
+   * Create a marker
+   * @deprecated Used in PluginMap.loadPlugin
+   *
+   * @param args
+   * @param callbackContext
+   * @throws JSONException
+   */
+  public void create(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    final JSONObject opts = args.getJSONObject(1);
+
+    this.create(opts, callbackContext);
   }
 
   private void setDropAnimation_(final Marker marker, final PluginAsyncInterface callback) {
