@@ -326,7 +326,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
    * @param callback
    * @throws JSONException
    */
-  private void createMarker(final JSONObject opts, final PluginAsyncInterface callback) throws JSONException {
+  private void createInstance(final JSONObject opts, final PluginAsyncInterface callback) throws JSONException {
     final MarkerOptions markerOptions = this.prepareMarkerOptions(opts);
     final JSONObject properties = this.prepareProperties(opts, markerOptions);
 
@@ -454,13 +454,13 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
   }
 
   /**
-   * Create a marker
+   * Create a marker from markerOptions
    * @param markerOptions
    * @param callbackContext
    * @throws JSONException
    */
   public void create(final JSONObject markerOptions, final CallbackContext callbackContext) throws JSONException {
-    this.createMarker(markerOptions, new PluginAsyncInterface() {
+    this.createInstance(markerOptions, new PluginAsyncInterface() {
       @Override
       public void onPostExecute(Object object) {
         JSONObject result = (JSONObject) object;
@@ -472,7 +472,40 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         callbackContext.error(errorMsg);
       }
     });
+  }
 
+  /**
+   * Creates a collection of Marker from markerOptionsCollection. The callback return an array of results (instead of an object line create())
+   *
+   * @param markerOptionsCollection
+   * @param callbackContext
+   * @throws JSONException
+   */
+  public void createCollection(final JSONArray markerOptionsCollection, final CallbackContext callbackContext) throws JSONException {
+    final JSONArray resultCollection = new JSONArray();
+
+    // create markers
+    for (int i = 0; i < markerOptionsCollection.length(); i++) {
+      JSONObject markerOptions = markerOptionsCollection.getJSONObject(i);
+
+      this.createInstance(markerOptions, new PluginAsyncInterface() {
+        @Override
+        public void onPostExecute(Object object) {
+          JSONObject result = (JSONObject) object;
+          resultCollection.put(result);
+
+          // Once every marker is created, we call success() with the results array
+          if (resultCollection.length() == markerOptionsCollection.length()) {
+            callbackContext.success(resultCollection);
+          }
+        }
+
+        @Override
+        public void onError(String errorMsg) {
+          callbackContext.error(errorMsg);
+        }
+      });
+    }
   }
 
   /**
