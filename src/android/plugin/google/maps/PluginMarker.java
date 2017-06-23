@@ -363,7 +363,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                 //------------------------------
                 Bundle bundle = PluginMarker.this.prepareIconBundle(opts);
 
-                PluginMarker.this.setIcon_(marker, bundle, new PluginAsyncInterface() {
+                PluginMarker.this._setIcon(marker, bundle, new PluginAsyncInterface() {
 
                   @Override
                   public void onPostExecute(final Object object) {
@@ -417,7 +417,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                     callback.onError(errorMsg);
                   }
 
-                });
+                }, false);
               } else {
                 //--------------------------
                 // Case: no icon property
@@ -497,7 +497,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                 //------------------------------
                 Bundle bundle = PluginMarker.this.prepareIconBundle(opts);
 
-                PluginMarker.this.setIconPerf(marker, bundle, new PluginAsyncInterface() {
+                PluginMarker.this._setIcon(marker, bundle, new PluginAsyncInterface() {
 
                   @Override
                   public void onPostExecute(final Object object) {
@@ -527,7 +527,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                     callback.onError(errorMsg);
                   }
 
-                });
+                }, true);
               } else {
                 //--------------------------
                 // Case: no icon property
@@ -1088,7 +1088,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       bundle.putString("url", (String)value);
     }
     if (bundle != null) {
-      this.setIcon_(marker, bundle, new PluginAsyncInterface() {
+      this._setIcon(marker, bundle, new PluginAsyncInterface() {
 
         @Override
         public void onPostExecute(Object object) {
@@ -1099,7 +1099,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         public void onError(String errorMsg) {
           callbackContext.error(errorMsg);
         }
-      });
+      }, false);
     } else {
       this.sendNoResult(callbackContext);
     }
@@ -1155,7 +1155,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
   }
 
-  private AsyncTask prepareIconLoadingFromLocalTask(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback) {
+  private AsyncTask prepareIconLoadingFromLocalTask(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback, final boolean useLocalCache) {
     return new AsyncTask<Void, Void, Bitmap>() {
 
       @Override
@@ -1165,64 +1165,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
           return null;
         }
 
-        Bitmap image = null;
-        if (iconUrl.indexOf("cdvfile://") == 0) {
-          CordovaResourceApi resourceApi = webView.getResourceApi();
-          iconUrl = PluginUtil.getAbsolutePathFromCDVFilePath(resourceApi, iconUrl);
-        }
-
-        if (iconUrl == null) {
-          return null;
-        }
-
-        if (iconUrl.indexOf("data:image/") == 0 && iconUrl.contains(";base64,")) {
-          String[] tmp = iconUrl.split(",");
-          image = PluginUtil.getBitmapFromBase64encodedImage(tmp[1]);
-        } else if (iconUrl.indexOf("file://") == 0 &&
-                !iconUrl.contains("file:///android_asset/")) {
-          iconUrl = iconUrl.replace("file://", "");
-
-          File tmp = new File(iconUrl);
-          if (tmp.exists()) {
-            image = BitmapFactory.decodeFile(iconUrl);
-          } else {
-            //if (PluginMarker.this.mapCtrl.mPluginLayout.isDebug) {
-            Log.w("GoogleMaps", "icon is not found (" + iconUrl + ")");
-            //}
-          }
-        } else {
-          //Log.d(TAG, "iconUrl = " + iconUrl);
-          if (iconUrl.indexOf("file:///android_asset/") == 0) {
-            iconUrl = iconUrl.replace("file:///android_asset/", "");
-          }
-          //Log.d(TAG, "iconUrl = " + iconUrl);
-          if (iconUrl.contains("./")) {
-            try {
-              boolean isAbsolutePath = iconUrl.startsWith("/");
-              File relativePath = new File(iconUrl);
-              iconUrl = relativePath.getCanonicalPath();
-              //Log.d(TAG, "iconUrl = " + iconUrl);
-              if (!isAbsolutePath) {
-                iconUrl = iconUrl.substring(1);
-              }
-              //Log.d(TAG, "iconUrl = " + iconUrl);
-            } catch (Exception e) {
-              e.printStackTrace();
-            }
-          }
-
-          AssetManager assetManager = PluginMarker.this.cordova.getActivity().getAssets();
-          InputStream inputStream;
-          try {
-            inputStream = assetManager.open(iconUrl);
-            image = BitmapFactory.decodeStream(inputStream);
-            inputStream.close();
-          } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-          }
-        }
-
+        Bitmap image = PluginMarker.this.loadLocalIcon(iconUrl, useLocalCache);
         if (image == null) {
           return null;
         }
@@ -1240,8 +1183,8 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
             int height = sizeInfo.getInt("height", 0);
             if (width > 0 && height > 0) {
               isResized = true;
-              width = (int)Math.round(width * PluginMarker.this.density);
-              height = (int)Math.round(height * PluginMarker.this.density);
+              width = Math.round(width * PluginMarker.this.density);
+              height = Math.round(height * PluginMarker.this.density);
               image = PluginUtil.resizeBitmap(image, width, height);
             }
           }
@@ -1287,7 +1230,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     return iconUrl;
   }
 
-  private void setIcon_(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback) {
+  private void _setIcon(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback, boolean useLocalCache) {
     boolean noCaching = false;
     if (iconProperty.containsKey("noCache")) {
       noCaching = iconProperty.getBoolean("noCache");
@@ -1319,8 +1262,9 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       //----------------------------------
       // Load icon from local file
       //----------------------------------
-      AsyncTask<Void, Void, Bitmap> task = this.prepareIconLoadingFromLocalTask(marker, iconProperty, callback);
-      task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+      AsyncTask<Void, Void, Bitmap> task = this.prepareIconLoadingFromLocalTask(marker, iconProperty, callback, useLocalCache);
+//      task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+      task.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
       iconLoadingTasks.add(task);
 
       return;
@@ -1360,14 +1304,16 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
   }
 
-  private Bitmap loadLocalIcon(String iconUrl) {
+  private Bitmap loadLocalIcon(String iconUrl, boolean useCache) {
     Bitmap image = null;
     String initialIconUrl = iconUrl;
 
     // Load icon from cache
-    image = this.localImageCache.getBitmapFromMemCache(iconUrl);
-    if (image != null) {
-      return image;
+    if (useCache) {
+      image = this.localImageCache.getBitmapFromMemCache(iconUrl);
+      if (image != null) {
+        return image;
+      }
     }
 
     if (iconUrl.indexOf("cdvfile://") == 0) {
@@ -1428,13 +1374,15 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       }
     }
 
-    // store image into the cache
-    this.localImageCache.addBitmapToMemoryCache(initialIconUrl, image);
+    if (useCache) {
+      // store image into the cache
+      this.localImageCache.addBitmapToMemoryCache(initialIconUrl, image);
+    }
 
     return image;
   }
 
-  private void setIconPerf(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback) {
+  private void _setIconPerf(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback) {
     if (iconProperty.containsKey("iconHue")) {
       cordova.getActivity().runOnUiThread(new Runnable() {
         @Override
@@ -1471,7 +1419,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
             return null;
           }
 
-          Bitmap image = PluginMarker.this.loadLocalIcon(iconUrl);
+          Bitmap image = PluginMarker.this.loadLocalIcon(iconUrl, true);
           if (image == null) {
             return null;
           }
