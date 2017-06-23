@@ -978,7 +978,7 @@ Map.prototype.addMarker = function (markerOptions, callback) {
         if (typeof callback === "function") {
             callback.call(self, marker, self);
         }
-    }, self.errorHandler, self.id, 'loadPlugin', ['Marker', markerOptions]);
+    }, self.errorHandler, self.id, 'createMarker', markerOptions);
 };
 
 /**
