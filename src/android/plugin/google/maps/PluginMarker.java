@@ -47,6 +47,8 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
   private ArrayList<Bitmap> icons = new ArrayList<Bitmap>();
   private HashMap<String, Integer> iconCacheKeys = new HashMap<String, Integer>();
 
+  private LocalImageCache localImageCache = new LocalImageCache();
+
   @Override
   public void initialize(CordovaInterface cordova, final CordovaWebView webView) {
     super.initialize(cordova, webView);
@@ -160,6 +162,10 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
       }
     });
+
+    // Clear local image cache
+    localImageCache.clear();
+    localImageCache = null;
   }
 
   /**
@@ -1375,6 +1381,13 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
   private Bitmap loadLocalIcon(String iconUrl) {
     Bitmap image = null;
+    String initialIconUrl = iconUrl;
+
+    // Load icon from cache
+    image = this.localImageCache.getBitmapFromMemCache(iconUrl);
+    if (image != null) {
+      return image;
+    }
 
     if (iconUrl.indexOf("cdvfile://") == 0) {
       CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -1433,6 +1446,9 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         return null;
       }
     }
+
+    // store image into the cache
+    this.localImageCache.addBitmapToMemoryCache(initialIconUrl, image);
 
     return image;
   }
