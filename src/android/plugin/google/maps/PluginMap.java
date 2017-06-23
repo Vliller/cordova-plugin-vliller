@@ -467,6 +467,16 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
       e.printStackTrace();
     }
   }
+
+  //-----------------------------------
+  // Create multiple Markers
+  //-----------------------------------
+  public synchronized void createMarkers(final JSONArray markersOptions, final CallbackContext callbackContext) throws JSONException {
+
+    // TODO
+
+  }
+
   public void fitBounds(final LatLngBounds cameraBounds, int padding) {
     Builder builder = CameraPosition.builder();
     builder.tilt(map.getCameraPosition().tilt);
