@@ -1509,7 +1509,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
           PluginMarker.this.setIconFromBitmap(marker, iconProperty, image, callback);
         }
       };
-      task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+      task.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
       iconLoadingTasks.add(task);
     } else {
       callback.onError("Icon file must be a local (http url not allowed) : " + iconUrl);
