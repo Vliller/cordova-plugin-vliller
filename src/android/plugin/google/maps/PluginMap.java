@@ -470,11 +470,13 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
 
   /**
    *
-   * @param markerOptions
+   * @param args
    * @param callbackContext
    * @throws JSONException
    */
-  public synchronized void createMarker(final JSONObject markerOptions, final CallbackContext callbackContext) throws JSONException {
+  public synchronized void createMarker(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    final JSONObject markerOptions = args.getJSONObject(0);
+
     final String serviceName = "Marker";
     final String pluginName = mapId + "-" + serviceName.toLowerCase();
 
