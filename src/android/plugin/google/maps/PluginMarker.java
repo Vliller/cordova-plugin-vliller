@@ -1306,26 +1306,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
 
     String iconUrl = iconProperty.getString("url");
-    if (iconUrl == null) {
-      callback.onPostExecute(marker);
-      return;
-    }
-
-    if (!iconUrl.contains("://") &&
-      !iconUrl.startsWith("/") &&
-      !iconUrl.startsWith("www/") &&
-      !iconUrl.startsWith("data:image") &&
-        !iconUrl.startsWith("./") &&
-        !iconUrl.startsWith("../")) {
-      iconUrl = "./" + iconUrl;
-    }
-
-    if (iconUrl.startsWith("./")  || iconUrl.startsWith("../")) {
-      iconUrl = iconUrl.replace("././", "./");
-      String currentPage = CURRENT_PAGE_URL;
-      currentPage = currentPage.replaceAll("[^\\/]*$", "");
-      iconUrl = currentPage + "/" + iconUrl;
-    }
+    iconUrl = this.prepareIconUrl(iconUrl);
 
     if (iconUrl == null) {
       callback.onPostExecute(marker);
