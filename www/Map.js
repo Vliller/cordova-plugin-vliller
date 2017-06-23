@@ -968,6 +968,11 @@ function createMarkerFromNative(nativeMarker, options) {
     return marker;
 }
 
+/**
+ *
+ * @param {any}      markerOptions
+ * @param {Function} callback
+ */
 Map.prototype.addMarker = function (markerOptions, callback) {
     var self = this;
 
@@ -984,24 +989,24 @@ Map.prototype.addMarker = function (markerOptions, callback) {
 
 /**
  *
- * @param {[type]}   markersOptions [description]
- * @param {Function} callback       [description]
+ * @param {array}    markerOptionsCollection
+ * @param {Function} callback
  */
-Map.prototype.addMarkers = function (markersOptions, callback) {
+Map.prototype.addMarkerCollection = function (markerOptionsCollection, callback) {
     var self = this;
 
-    markersOptions.map(prepareMarkerOptions);
+    markerOptionsCollection.map(prepareMarkerOptions);
 
     exec(function (nativeMarkers) {
         var markers = [];
         for (var i = 0; i < nativeMarkers.length; i++) {
-            markers.push(createMarkerFromNative.call(self, nativeMarkers[i], markersOptions[i]));
+            markers.push(createMarkerFromNative.call(self, nativeMarkers[i], markerOptionsCollection[i]));
         }
 
         if (typeof callback === "function") {
             callback.call(self, markers, self);
         }
-    }, self.errorHandler, self.id, 'createMarkers', markersOptions);
+    }, self.errorHandler, self.id, 'createMarkerCollection', [markerOptionsCollection]);
 };
 
 /*****************************************************************************
