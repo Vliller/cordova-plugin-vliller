@@ -1,4 +1,3 @@
-cordova.define("cordova-plugin-vliller-map.Map", function(require, exports, module) {
 var argscheck = require('cordova/argscheck'),
     utils = require('cordova/utils'),
     exec = require('cordova/exec'),
@@ -1140,5 +1139,3 @@ Map.prototype._onCameraEvent = function(eventName, cameraPosition) {
     this.trigger(eventName, cameraPosition, this);
 };
 module.exports = Map;
-
-});
