@@ -468,9 +468,53 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
     }
   }
 
-  //-----------------------------------
-  // Create multiple Markers
-  //-----------------------------------
+  /**
+   *
+   * @param markerOptions
+   * @param callbackContext
+   * @throws JSONException
+   */
+  public synchronized void createMarker(final JSONObject markerOptions, final CallbackContext callbackContext) throws JSONException {
+    final String serviceName = "Marker";
+    final String pluginName = mapId + "-" + serviceName.toLowerCase();
+
+    try {
+      if (plugins.containsKey(pluginName)) {
+        //Log.d("PluginMap", "--> useCache");
+        PluginMarker marker = (PluginMarker) plugins.get(pluginName).plugin;
+        marker.create(markerOptions, callbackContext);
+
+        return;
+      }
+
+      //Log.d("PluginMap", "--> create new instance");
+      PluginMarker marker = new PluginMarker();
+
+      PluginEntry pluginEntry = new PluginEntry(pluginName, marker);
+      plugins.put(pluginName, pluginEntry);
+      mapCtrl.pluginManager.addService(pluginEntry);
+
+      marker.privateInitialize(pluginName, cordova, webView, null);
+
+      marker.initialize(cordova, webView);
+      marker.setPluginMap(PluginMap.this);
+
+      marker.self = marker;
+      marker.CURRENT_PAGE_URL = CURRENT_PAGE_URL;
+
+      marker.create(markerOptions, callbackContext);
+    } catch (Exception e) {
+      e.printStackTrace();
+      callbackContext.error(e.getMessage());
+    }
+  }
+
+  /**
+   *
+   * @param markersOptions
+   * @param callbackContext
+   * @throws JSONException
+   */
   public synchronized void createMarkers(final JSONArray markersOptions, final CallbackContext callbackContext) throws JSONException {
 
     // TODO
@@ -770,7 +814,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
         } else if (PluginUtil.isNumeric(widthString)) {
           double widthDouble = Double.parseDouble(widthString);
 
-          if (widthDouble <= 1.0) {	// for percentage values (e.g. 0.5 = 50%).
+          if (widthDouble <= 1.0) { // for percentage values (e.g. 0.5 = 50%).
             width = (int)((double)mapView.getWidth() * (widthDouble));
           } else {
             width = (int)widthDouble;
@@ -797,7 +841,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
         } else if (PluginUtil.isNumeric(widthString)) {
           double widthDouble = Double.parseDouble(widthString);
 
-          if (widthDouble <= 1.0) {	// for percentage values (e.g. 0.5 = 50%).
+          if (widthDouble <= 1.0) { // for percentage values (e.g. 0.5 = 50%).
             maxWidth = (int)((double)mapView.getWidth() * (widthDouble));
           } else {
             maxWidth = (int)widthDouble;
