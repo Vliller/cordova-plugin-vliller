@@ -82,7 +82,7 @@ public class AsyncLoadImage extends AsyncTask<String, Void, Bitmap> {
     }
   }
 
-  public static void removeBitmapFromMemCahce(String key) {
+  public static void removeBitmapFromMemCache(String key) {
     Bitmap image = mIconCache.remove(key);
     if (image == null || image.isRecycled()) {
       return;
