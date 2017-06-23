@@ -469,6 +469,30 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
   }
 
   /**
+   * Initialize a PluginMarker
+   *
+   * @param pluginName
+   * @return
+   */
+  private PluginMarker initPluginMarker(String pluginName) {
+    PluginMarker marker = new PluginMarker();
+
+    PluginEntry pluginEntry = new PluginEntry(pluginName, marker);
+    plugins.put(pluginName, pluginEntry);
+    mapCtrl.pluginManager.addService(pluginEntry);
+
+    marker.privateInitialize(pluginName, cordova, webView, null);
+
+    marker.initialize(cordova, webView);
+    marker.setPluginMap(PluginMap.this);
+
+    marker.self = marker;
+    marker.CURRENT_PAGE_URL = CURRENT_PAGE_URL;
+
+    return  marker;
+  }
+
+  /**
    *
    * @param args
    * @param callbackContext
@@ -477,8 +501,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
   public synchronized void createMarker(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
     final JSONObject markerOptions = args.getJSONObject(0);
 
-    final String serviceName = "Marker";
-    final String pluginName = mapId + "-" + serviceName.toLowerCase();
+    final String pluginName = mapId + "-marker";
 
     try {
       if (plugins.containsKey(pluginName)) {
@@ -490,19 +513,7 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
       }
 
       //Log.d("PluginMap", "--> create new instance");
-      PluginMarker marker = new PluginMarker();
-
-      PluginEntry pluginEntry = new PluginEntry(pluginName, marker);
-      plugins.put(pluginName, pluginEntry);
-      mapCtrl.pluginManager.addService(pluginEntry);
-
-      marker.privateInitialize(pluginName, cordova, webView, null);
-
-      marker.initialize(cordova, webView);
-      marker.setPluginMap(PluginMap.this);
-
-      marker.self = marker;
-      marker.CURRENT_PAGE_URL = CURRENT_PAGE_URL;
+      PluginMarker marker = this.initPluginMarker(pluginName);
 
       marker.create(markerOptions, callbackContext);
     } catch (Exception e) {
@@ -513,14 +524,32 @@ public class PluginMap extends MyPlugin implements OnMarkerClickListener,
 
   /**
    *
-   * @param markersOptions
+   * @param args
    * @param callbackContext
    * @throws JSONException
    */
-  public synchronized void createMarkers(final JSONArray markersOptions, final CallbackContext callbackContext) throws JSONException {
+  public synchronized void createMarkerCollection(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    final JSONArray markerOptionsCollection = args.getJSONArray(0);
 
-    // TODO
+    final String pluginName = mapId + "-marker";
 
+    try {
+      if (plugins.containsKey(pluginName)) {
+        //Log.d("PluginMap", "--> useCache");
+        PluginMarker marker = (PluginMarker) plugins.get(pluginName).plugin;
+        marker.createCollection(markerOptionsCollection, callbackContext);
+
+        return;
+      }
+
+      //Log.d("PluginMap", "--> create new instance");
+      PluginMarker marker = this.initPluginMarker(pluginName);
+
+      marker.createCollection(markerOptionsCollection, callbackContext);
+    } catch (Exception e) {
+      e.printStackTrace();
+      callbackContext.error(e.getMessage());
+    }
   }
 
   public void fitBounds(final LatLngBounds cameraBounds, int padding) {
