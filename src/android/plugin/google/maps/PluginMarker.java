@@ -1155,48 +1155,139 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
   }
 
+  private Bitmap loadLocalIcon(Bundle iconProperty, boolean useCache) {
+    Bitmap image = null;
+
+    String iconUrl = iconProperty.getString("url");
+    if (iconUrl == null) {
+      return null;
+    }
+
+    String cacheIconKey = iconUrl;
+
+    Boolean isResized = false;
+    int width = 0, height = 0;
+
+    Object size = iconProperty.get("size");
+    if (Bundle.class.isInstance(size)) {
+      Bundle sizeInfo = (Bundle) size;
+
+      width = sizeInfo.getInt("width", 0);
+      height = sizeInfo.getInt("height", 0);
+
+      if (width > 0 && height > 0) {
+        isResized = true;
+        width = Math.round(width * PluginMarker.this.density);
+        height = Math.round(height * PluginMarker.this.density);
+
+        // add dimension to icon key name
+        cacheIconKey += "-" + width + "_" + height;
+      }
+    }
+
+    // Load icon from cache
+    if (useCache) {
+//      Log.d("Vliller debug", "Icon cache actived");
+
+      image = this.localImageCache.getBitmapFromMemCache(cacheIconKey);
+      if (image != null) {
+//        Log.d("Vliller debug", "Use cache icon");
+
+        return image;
+      }
+
+//      Log.d("Vliller debug", "Icon not in cache");
+//      Log.d("Vliller debug", cacheIconKey);
+    }
+
+    if (iconUrl.indexOf("cdvfile://") == 0) {
+      CordovaResourceApi resourceApi = webView.getResourceApi();
+      iconUrl = PluginUtil.getAbsolutePathFromCDVFilePath(resourceApi, iconUrl);
+    }
+
+    if (iconUrl == null) {
+      return null;
+    }
+
+    if (iconUrl.indexOf("data:image/") == 0 && iconUrl.contains(";base64,")) {
+      String[] tmp = iconUrl.split(",");
+      image = PluginUtil.getBitmapFromBase64encodedImage(tmp[1]);
+    } else if (iconUrl.indexOf("file://") == 0 &&
+            !iconUrl.contains("file:///android_asset/")) {
+      iconUrl = iconUrl.replace("file://", "");
+
+      File tmp = new File(iconUrl);
+      if (tmp.exists()) {
+        image = BitmapFactory.decodeFile(iconUrl);
+      } else {
+        //if (PluginMarker.this.mapCtrl.mPluginLayout.isDebug) {
+        Log.w("GoogleMaps", "icon is not found (" + iconUrl + ")");
+        //}
+      }
+    } else {
+      //Log.d(TAG, "iconUrl = " + iconUrl);
+      if (iconUrl.indexOf("file:///android_asset/") == 0) {
+        iconUrl = iconUrl.replace("file:///android_asset/", "");
+      }
+
+      //Log.d(TAG, "iconUrl = " + iconUrl);
+      if (iconUrl.contains("./")) {
+        try {
+          boolean isAbsolutePath = iconUrl.startsWith("/");
+          File relativePath = new File(iconUrl);
+          iconUrl = relativePath.getCanonicalPath();
+          //Log.d(TAG, "iconUrl = " + iconUrl);
+          if (!isAbsolutePath) {
+            iconUrl = iconUrl.substring(1);
+          }
+          //Log.d(TAG, "iconUrl = " + iconUrl);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+
+      AssetManager assetManager = PluginMarker.this.cordova.getActivity().getAssets();
+      InputStream inputStream;
+      try {
+        inputStream = assetManager.open(iconUrl);
+        image = BitmapFactory.decodeStream(inputStream);
+        inputStream.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+        return null;
+      }
+    }
+
+//    icons.add(image);
+
+    if (isResized) {
+      Bitmap resizedImage = PluginUtil.resizeBitmap(image, width, height);
+      image.recycle();
+
+      image = resizedImage;
+    } else {
+      Bitmap scaledImage = PluginUtil.scaleBitmapForDevice(image);
+      image.recycle();
+
+      image = scaledImage;
+    }
+
+//    icons.add(image);
+
+    if (useCache) {
+      // store image into the cache
+      this.localImageCache.addBitmapToMemoryCache(cacheIconKey, image);
+    }
+
+    return image;
+  }
+
   private AsyncTask prepareIconLoadingFromLocalTask(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback, final boolean useLocalCache) {
     return new AsyncTask<Void, Void, Bitmap>() {
 
       @Override
       protected Bitmap doInBackground(Void... params) {
-        String iconUrl = iconProperty.getString("url");
-        if (iconUrl == null) {
-          return null;
-        }
-
-        Bitmap image = PluginMarker.this.loadLocalIcon(iconUrl, useLocalCache);
-        if (image == null) {
-          return null;
-        }
-
-        icons.add(image);
-
-        Boolean isResized = false;
-        if (iconProperty.containsKey("size")) {
-          Object size = iconProperty.get("size");
-
-          if (Bundle.class.isInstance(size)) {
-
-            Bundle sizeInfo = (Bundle)size;
-            int width = sizeInfo.getInt("width", 0);
-            int height = sizeInfo.getInt("height", 0);
-            if (width > 0 && height > 0) {
-              isResized = true;
-              width = Math.round(width * PluginMarker.this.density);
-              height = Math.round(height * PluginMarker.this.density);
-              image = PluginUtil.resizeBitmap(image, width, height);
-            }
-          }
-        }
-
-        if (!isResized) {
-          image = PluginUtil.scaleBitmapForDevice(image);
-        }
-
-        icons.add(image);
-
-        return image;
+        return PluginMarker.this.loadLocalIcon(iconProperty, useLocalCache);
       }
 
       @Override
@@ -1304,84 +1395,6 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
   }
 
-  private Bitmap loadLocalIcon(String iconUrl, boolean useCache) {
-    Bitmap image = null;
-    String initialIconUrl = iconUrl;
-
-    // Load icon from cache
-    if (useCache) {
-      image = this.localImageCache.getBitmapFromMemCache(iconUrl);
-      if (image != null) {
-        return image;
-      }
-    }
-
-    if (iconUrl.indexOf("cdvfile://") == 0) {
-      CordovaResourceApi resourceApi = webView.getResourceApi();
-      iconUrl = PluginUtil.getAbsolutePathFromCDVFilePath(resourceApi, iconUrl);
-    }
-
-    if (iconUrl == null) {
-      return null;
-    }
-
-    if (iconUrl.indexOf("data:image/") == 0 && iconUrl.contains(";base64,")) {
-      String[] tmp = iconUrl.split(",");
-      image = PluginUtil.getBitmapFromBase64encodedImage(tmp[1]);
-    } else if (iconUrl.indexOf("file://") == 0 &&
-            !iconUrl.contains("file:///android_asset/")) {
-      iconUrl = iconUrl.replace("file://", "");
-
-      File tmp = new File(iconUrl);
-      if (tmp.exists()) {
-        image = BitmapFactory.decodeFile(iconUrl);
-      } else {
-        //if (PluginMarker.this.mapCtrl.mPluginLayout.isDebug) {
-        Log.w("GoogleMaps", "icon is not found (" + iconUrl + ")");
-        //}
-      }
-    } else {
-      //Log.d(TAG, "iconUrl = " + iconUrl);
-      if (iconUrl.indexOf("file:///android_asset/") == 0) {
-        iconUrl = iconUrl.replace("file:///android_asset/", "");
-      }
-
-      //Log.d(TAG, "iconUrl = " + iconUrl);
-      if (iconUrl.contains("./")) {
-        try {
-          boolean isAbsolutePath = iconUrl.startsWith("/");
-          File relativePath = new File(iconUrl);
-          iconUrl = relativePath.getCanonicalPath();
-          //Log.d(TAG, "iconUrl = " + iconUrl);
-          if (!isAbsolutePath) {
-            iconUrl = iconUrl.substring(1);
-          }
-          //Log.d(TAG, "iconUrl = " + iconUrl);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-
-      AssetManager assetManager = PluginMarker.this.cordova.getActivity().getAssets();
-      InputStream inputStream;
-      try {
-        inputStream = assetManager.open(iconUrl);
-        image = BitmapFactory.decodeStream(inputStream);
-        inputStream.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-        return null;
-      }
-    }
-
-    if (useCache) {
-      // store image into the cache
-      this.localImageCache.addBitmapToMemoryCache(initialIconUrl, image);
-    }
-
-    return image;
-  }
-
   private void _setIconPerf(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback) {
     if (iconProperty.containsKey("iconHue")) {
       cordova.getActivity().runOnUiThread(new Runnable() {
@@ -1414,12 +1427,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
         @Override
         protected Bitmap doInBackground(Void... params) {
-          String iconUrl = iconProperty.getString("url");
-          if (iconUrl == null) {
-            return null;
-          }
-
-          Bitmap image = PluginMarker.this.loadLocalIcon(iconUrl, true);
+          Bitmap image = PluginMarker.this.loadLocalIcon(iconProperty, true);
           if (image == null) {
             return null;
           }
