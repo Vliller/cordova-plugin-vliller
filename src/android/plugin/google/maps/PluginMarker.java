@@ -327,10 +327,10 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
   /**
    * Create an instance of Marker class and return an JSONObject in callback onPostExecute
    * @param opts
-   * @param callback
-   * @throws JSONException
+   * @param useCache
+   *@param callback  @throws JSONException
    */
-  private void createInstance(final JSONObject opts, final PluginAsyncInterface callback) throws JSONException {
+  private void createInstance(final JSONObject opts, final boolean useCache, final PluginAsyncInterface callback) throws JSONException {
     final MarkerOptions markerOptions = this.prepareMarkerOptions(opts);
     final JSONObject properties = this.prepareProperties(opts, markerOptions);
 
@@ -417,7 +417,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                     callback.onError(errorMsg);
                   }
 
-                }, false);
+                }, useCache);
               } else {
                 //--------------------------
                 // Case: no icon property
@@ -426,6 +426,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
                 if (opts.has("animation")) {
                   markerAnimation = opts.getString("animation");
                 }
+
                 if (markerAnimation != null) {
                   // Execute animation
                   PluginMarker.this.setMarkerAnimation_(marker, markerAnimation, new PluginAsyncInterface() {
@@ -456,94 +457,6 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     });
   }
 
-
-  /**
-   * Create an instance of Marker class and return an JSONObject in callback onPostExecute
-   *
-   * @param opts
-   * @param callback
-   * @throws JSONException
-   */
-  private void createInstancePerf(final JSONObject opts, final PluginAsyncInterface callback) throws JSONException {
-    final MarkerOptions markerOptions = this.prepareMarkerOptions(opts);
-    final JSONObject properties = this.prepareProperties(opts, markerOptions);
-
-    cordova.getActivity().runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        final Marker marker = map.addMarker(markerOptions);
-        marker.hideInfoWindow();
-
-        cordova.getThreadPool().execute(new Runnable() {
-          @Override
-          public void run() {
-
-            try {
-              // Store the marker
-              String id = "marker_" + marker.getId();
-              self.objects.put(id, marker);
-
-              self.objects.put("marker_property_" + marker.getId(), properties);
-
-              // Prepare the result
-              final JSONObject result = new JSONObject();
-              result.put("hashCode", marker.hashCode());
-              result.put("id", id);
-
-              // Load icon
-              if (opts.has("icon")) {
-                //------------------------------
-                // Case: have the icon property
-                //------------------------------
-                Bundle bundle = PluginMarker.this.prepareIconBundle(opts);
-
-                PluginMarker.this._setIcon(marker, bundle, new PluginAsyncInterface() {
-
-                  @Override
-                  public void onPostExecute(final Object object) {
-                    cordova.getActivity().runOnUiThread(new Runnable() {
-                      @Override
-                      public void run() {
-
-                        Marker marker = (Marker) object;
-                        if (opts.has("visible")) {
-                          try {
-                            marker.setVisible(opts.getBoolean("visible"));
-                          } catch (JSONException e) {
-                            e.printStackTrace();
-                            callback.onError(e.getMessage());
-                          }
-                        } else {
-                          marker.setVisible(true);
-                        }
-
-                        callback.onPostExecute(result);
-                      }
-                    });
-                  }
-
-                  @Override
-                  public void onError(String errorMsg) {
-                    callback.onError(errorMsg);
-                  }
-
-                }, true);
-              } else {
-                //--------------------------
-                // Case: no icon property
-                //--------------------------
-                callback.onPostExecute(result);
-              }
-            } catch (Exception e) {
-              e.printStackTrace();
-              callback.onError("" + e.getMessage());
-            }
-          }
-        });
-      }
-    });
-  }
-
   /**
    * Create a marker from markerOptions
    * @param markerOptions
@@ -551,7 +464,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
    * @throws JSONException
    */
   public void create(final JSONObject markerOptions, final CallbackContext callbackContext) throws JSONException {
-    this.createInstance(markerOptions, new PluginAsyncInterface() {
+    this.createInstance(markerOptions, false, new PluginAsyncInterface() {
       @Override
       public void onPostExecute(Object object) {
         JSONObject result = (JSONObject) object;
@@ -579,7 +492,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     for (int i = 0; i < markerOptionsCollection.length(); i++) {
       JSONObject markerOptions = markerOptionsCollection.getJSONObject(i);
 
-      this.createInstancePerf(markerOptions, new PluginAsyncInterface() {
+      this.createInstance(markerOptions, true, new PluginAsyncInterface() {
         @Override
         public void onPostExecute(Object object) {
           JSONObject result = (JSONObject) object;
