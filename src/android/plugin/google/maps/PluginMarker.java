@@ -1117,7 +1117,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       return;
     }
     try {
-      icons.add(image);
+//      icons.add(image);
       marker.setIcon(BitmapDescriptorFactory.fromBitmap(image));
 
       // Save the information for the anchor property
@@ -1142,7 +1142,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
         }
       }
 
-      image.recycle();
+//      image.recycle();
       callback.onPostExecute(marker);
     } catch (Exception e) {
       //e.printStackTrace();
@@ -1155,6 +1155,12 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
   }
 
+  /**
+   * Load local icon from `url` attribute
+   * @param iconProperty
+   * @param useCache
+   * @return
+   */
   private Bitmap loadLocalIcon(Bundle iconProperty, boolean useCache) {
     Bitmap image = null;
 
@@ -1168,6 +1174,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     Boolean isResized = false;
     int width = 0, height = 0;
 
+    // check if there is the size attribute
     Object size = iconProperty.get("size");
     if (Bundle.class.isInstance(size)) {
       Bundle sizeInfo = (Bundle) size;
@@ -1187,17 +1194,11 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
 
     // Load icon from cache
     if (useCache) {
-//      Log.d("Vliller debug", "Icon cache actived");
-
       image = this.localImageCache.getBitmapFromMemCache(cacheIconKey);
-      if (image != null) {
-//        Log.d("Vliller debug", "Use cache icon");
 
+      if (image != null) {
         return image;
       }
-
-//      Log.d("Vliller debug", "Icon not in cache");
-//      Log.d("Vliller debug", cacheIconKey);
     }
 
     if (iconUrl.indexOf("cdvfile://") == 0) {
@@ -1395,84 +1396,6 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
     }
   }
 
-  private void _setIconPerf(final Marker marker, final Bundle iconProperty, final PluginAsyncInterface callback) {
-    if (iconProperty.containsKey("iconHue")) {
-      cordova.getActivity().runOnUiThread(new Runnable() {
-        @Override
-        public void run() {
-          float hue = iconProperty.getFloat("iconHue");
-          marker.setIcon(BitmapDescriptorFactory.defaultMarker(hue));
-        }
-      });
-
-      callback.onPostExecute(marker);
-      return;
-    }
-
-    String iconUrl = iconProperty.getString("url");
-    iconUrl = this.prepareIconUrl(iconUrl);
-
-    if (iconUrl == null) {
-      callback.onPostExecute(marker);
-      return;
-    }
-
-    iconProperty.putString("url", iconUrl);
-
-    if (iconUrl.indexOf("http") != 0) {
-      //----------------------------------
-      // Load icon from local file
-      //----------------------------------
-      AsyncTask<Void, Void, Bitmap> task = new AsyncTask<Void, Void, Bitmap>() {
-
-        @Override
-        protected Bitmap doInBackground(Void... params) {
-          Bitmap image = PluginMarker.this.loadLocalIcon(iconProperty, true);
-          if (image == null) {
-            return null;
-          }
-
-          icons.add(image);
-
-          Boolean isResized = false;
-          if (iconProperty.containsKey("size")) {
-            Object size = iconProperty.get("size");
-
-            if (Bundle.class.isInstance(size)) {
-
-              Bundle sizeInfo = (Bundle)size;
-              int width = sizeInfo.getInt("width", 0);
-              int height = sizeInfo.getInt("height", 0);
-              if (width > 0 && height > 0) {
-                isResized = true;
-                width = Math.round(width * PluginMarker.this.density);
-                height = Math.round(height * PluginMarker.this.density);
-                image = PluginUtil.resizeBitmap(image, width, height);
-              }
-            }
-          }
-
-          if (!isResized) {
-            image = PluginUtil.scaleBitmapForDevice(image);
-          }
-
-          icons.add(image);
-
-          return image;
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap image) {
-          PluginMarker.this.setIconFromBitmap(marker, iconProperty, image, callback);
-        }
-      };
-      task.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
-      iconLoadingTasks.add(task);
-    } else {
-      callback.onError("Icon file must be a local (http url not allowed) : " + iconUrl);
-    }
-  }
-
   private void _setIconAnchor(final Marker marker, double anchorX, double anchorY, final int imageWidth, final int imageHeight) {
     // The `anchor` of the `icon` property
     anchorX = anchorX * this.density;
@@ -1486,6 +1409,7 @@ public class PluginMarker extends MyPlugin implements MyPluginInterface  {
       }
     });
   }
+
   private void _setInfoWindowAnchor(final Marker marker, double anchorX, double anchorY, final int imageWidth, final int imageHeight) {
     // The `anchor` of the `icon` property
     anchorX = anchorX * this.density;
